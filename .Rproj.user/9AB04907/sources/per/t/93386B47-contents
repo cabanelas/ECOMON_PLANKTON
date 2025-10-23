@@ -1,0 +1,1046 @@
+################################################
+################################################
+#############    ECOMON ZP DATA     ############
+################################################
+################################################
+## CREATED JUNE 2023
+################ volume # per 100m3 data #######
+## This is EcoMon data version 3.8 
+## downloaded data sometime in May 2023
+### DATA EUPHAUSIIDS
+
+# Blank cells in the Data spreadsheet indicate that the plankton sample was not
+# processed for either zooplankton or ichthyoplankton
+
+# euph_10m2 is the sum of taxa codes 2000-2099 and euph1_10m2 is just 
+# unidentified euphausicea (just taxa code 2000) -Harvey 
+
+
+## Packages
+library(tidyverse)
+
+## Data
+############      -------    SOUTHERN NEW ENGLAND REGION     -------       ####
+# Long format 
+e_sne_l <- read.csv("output/EcoMon_EUPHAUSIID_SNE_m3_long.csv", header = TRUE)
+e_sne_l <- e_sne_l[, -1]
+
+#wide format
+e_sne_w <- read.csv("output/EcoMon_EUPHAUSIID_SNE_m3_wide.csv", header = TRUE)
+e_sne_w <- e_sne_w[, -1]
+############################################################################## 
+
+str(e_sne_w)
+options(scipen = 999) 
+# to make all columns viewable
+#rstudioapi::writeRStudioPreference("data_viewer_max_columns", 1000L)
+
+############################################################################## 
+## add seasons
+e_sne_l <- e_sne_l %>%
+  mutate(season = case_when(between(monthNum, 3, 5) ~ "Spring",
+                            between(monthNum, 6, 8) ~ "Summer",
+                            between(monthNum, 9, 11) ~ "Fall",
+                            TRUE ~ "Winter"))
+
+e_sne_w <- e_sne_w %>%
+  mutate(season = case_when(between(monthNum, 3, 5) ~ "Spring",
+                            between(monthNum, 6, 8) ~ "Summer",
+                            between(monthNum, 9, 11) ~ "Fall",
+                            TRUE ~ "Winter"))
+############################################################################## 
+
+# remove NA rows in abund values 
+e_sne_l1 <- e_sne_l[!is.na(e_sne_l$ind_100m3),]
+
+library(tidyr)
+e_sne_w1 <- e_sne_w %>% drop_na(22:39)
+############################################################################## 
+### SUBSET REMOVE LOW ABUND/RARE TAXA
+### Remove:  
+### Always 0/not present: eupham; thypsp
+### Very low abun/very rare: nemabo; euphspp*, nemaspp; stylspp; stylel; shysac
+## NAs were already removed too 
+eu_l <- e_sne_l1[!grepl('eupham|thypsp|nemabo|nemaspp|shysac', e_sne_l1$taxa),]
+# try combining Euphspp with EUPHASIACEA; Stylspp and Stylel into Stylocheiron spp;
+
+## subset wide df
+## remove eupham, thypsp, nemaspp, shysac, nemabo
+eu_w <- e_sne_w1[, -c(28,32,37:39)]
+
+###############################################################################
+
+library(RColorBrewer)
+mycolors = c(brewer.pal(name="Dark2", n = 8), 
+             brewer.pal(name="Paired", n = 6))
+
+###############################################################################
+###############################################################################
+
+# line plot by taxa; need to group by yr
+eu_l_group <- eu_l %>%
+  group_by(cruise_name, year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(ind_100m3)) %>%
+  distinct(cruise_name, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+
+eu_l_mean <- eu_l_group %>%
+  group_by(year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(mean_100m3)) %>%
+  distinct(year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+############################################################################## 
+
+ggplot(data=eu_l_mean, aes(x=year, y=mean_100m3)) + 
+  geom_line() + 
+  facet_wrap(~TAXA_NAME, scales = "free") +
+  labs(y = "100m3")
+
+ggplot(eu_l_mean, aes(x = year, y = mean_100m3)) + 
+  geom_line(size = 1) +
+  facet_wrap(~taxa, scales = "free")
+
+############################################################################## 
+ggplot(data=eu_l_mean %>% filter(taxa != "euph"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "white", color = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_mean %>% filter(taxa != "euph" & taxa != "euph1"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) + 
+  geom_bar(stat = "identity") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "white", color = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_mean %>% filter(taxa != "euph" & taxa != "euph1"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) + 
+  geom_bar(stat = "identity", position = "fill") +
+  labs(y = "RelatieAbundance (%)")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "white", color = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_mean %>% filter(taxa == "euph"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.2,0.95), 
+        legend.title = element_blank(),
+        legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+### combining some taxa:
+
+### combine Euphausia krohnii with euphausia spp
+### M norvegica
+### N Megalops
+### combine Stylocheiron
+### combine thysanoessa
+eu_w_subset <- eu_w 
+
+eu_w_subset$EUSPPKR_100m3 <- (eu_w_subset[["euphspp_100m3"]] + 
+                              eu_w_subset[["euphkr_100m3"]])/2
+
+eu_w_subset$STYLO_100m3 <- (eu_w_subset[["stylspp_100m3"]] + 
+                            eu_w_subset[["stylel_100m3"]])/2
+
+eu_w_subset$THYSAN_100m3 <- (eu_w_subset[["thysin_100m3"]] + 
+                             eu_w_subset[["thysra_100m3"]] + 
+                             eu_w_subset[["thysgr_100m3"]] + 
+                             eu_w_subset[["thysspp_100m3"]]  + 
+                             eu_w_subset[["thyslo_100m3"]])/5
+
+
+eu_w_subset1 <- eu_w_subset[, c(1:23, 25, 33, 35:38)]
+
+names(eu_w_subset1)<-gsub("_100m3","",names(eu_w_subset1))
+
+#move season column 
+#move region & type columns 
+eu_w_subset1 <- subset(eu_w_subset1, select=c(1:21,26,22:25,27:29))
+
+eu_w_subset1 <- eu_w_subset1 %>%
+          pivot_longer(
+                  cols = euph:THYSAN,
+                  names_to = "taxa",
+                  values_to = "ind_100m3")
+
+taxa_names <- read.csv("raw/EcoMon_TaxaNames_addedNames.csv", header = TRUE)
+
+t_names <- taxa_names %>%
+  filter(unit == "100m3") %>%
+  select(taxa, TAXA_NAME)
+
+eu_w_subset1 <- left_join(eu_w_subset1, t_names, by = "taxa")
+############################################################################## 
+eu_w_subset1a <- eu_w_subset1 %>%
+  group_by(cruise_name, year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(ind_100m3)) %>%
+  distinct(cruise_name, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+
+eu_w_subset1b <- eu_w_subset1a %>%
+  group_by(year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(mean_100m3)) %>%
+  distinct(year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_w_subset1b %>% filter(taxa != "euph"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_w_subset1b %>% filter(taxa != "euph"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_w_subset1b %>% filter(taxa != "euph" & taxa != "euph1"), 
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(y = "Relative abundance (%)")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+eu_l_TYPE <- eu_l %>%
+  group_by(cruise_name, type, year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(ind_100m3)) %>%
+  distinct(cruise_name, type, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+
+eu_l_TYPE1 <- eu_l_TYPE %>%
+  group_by(type, year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(mean_100m3)) %>%
+  distinct(type, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+  
+
+types <- c('C' = "Coastal", 'IS' = "Inner Shelf", 
+           'MS' = "Mid Shelf", 'OFF' = "Off Shelf", 
+           'SB' = "Shelf Break")
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_TYPE1 %>% filter(taxa != "euph" & taxa != "euph1"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~type, scales = "free_y",
+             labeller = as_labeller(types)) +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.87,0.2), 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        #strip.text.y = element_text(size=18), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_TYPE1 %>% filter(taxa != "euph" & taxa != "euph1"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_wrap(~type, scales = "free_y",
+             labeller = as_labeller(types)) +
+  labs(y = "Relative abundance (%)")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.87,0.2), 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=15), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+
+############################################################################## 
+ggplot(data=eu_l_TYPE1 %>% filter(taxa != "euph"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~type, scales = "free_y",
+             labeller = as_labeller(types)) +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.87,0.2), 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        #strip.text.x = element_text(size=18), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_TYPE1 %>% filter(taxa != "euph"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_wrap(~type, scales = "free_y",
+             labeller = as_labeller(types)) +
+  labs(y = "Relative Abundance (%)")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.87,0.2), 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=15), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_l_TYPE1, aes(x=year, y=mean_100m3, fill = type)) + 
+  geom_bar(stat = "identity") +
+  facet_wrap(~TAXA_NAME, scales = "free_y")+
+  labs(y = expression(paste("per 100", m^{3}, "of water volume"))) +
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.6,0.05), 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=11),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+
+############################################################################## 
+ggplot(data=eu_l_TYPE1, aes(x=year, y=mean_100m3, fill = type)) + 
+  geom_bar(stat = "identity", positio = "fill") +
+  facet_wrap(~TAXA_NAME, scales = "free_y")+
+  labs(y = "Relative Abundance (%)") +
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = c(0.6,0.05), 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=11),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+data1 <- eu_l_mean %>% 
+  filter(taxa != "euph") #euph_10m# is the sum of taxa codes 2000-2099
+
+data1 <- aggregate(mean_100m3 ~ year, data = data1, FUN = "max")
+
+ggplot(data1, aes(x = year, y = mean_100m3)) + 
+  geom_line(color = "blue", linewidth = 1) + 
+  theme_bw() +
+  theme(axis.title.x = element_blank()) +
+  ggtitle("Euphausiids")
+############################################################################## 
+
+############################################################################## 
+## remove euph 
+eu_l_mean2 <- eu_l_mean %>%
+  filter(taxa != "euph") #sum of taxa codes 2000-2099 
+
+ggplot(data=eu_l_mean2, aes(x=year, y=mean_100m3, color=TAXA_NAME)) + 
+  geom_line() + 
+  facet_wrap(~TAXA_NAME, scales = "free")
+############################################################################## 
+
+############################################################################## 
+## euph, euphkr, euphspp
+euphausi_g <- eu_l_mean %>%
+  filter(taxa == "euph" | taxa == "euphkr" | taxa == "euphspp")
+
+euphausi_g <- euphausi_g %>%
+  mutate(date1=as.Date(date, format = "%d-%b-%y"))
+
+euphausi <- euphausi_g %>%
+  group_by(date1, taxa) %>%
+  mutate(mean_100m3 = mean(ind_100m3)) %>%
+  distinct(date1, taxa, .keep_all = TRUE) %>%
+  ungroup()
+
+ggplot(euphausi, aes(x = date1, y = mean_100m3, color = taxa)) + 
+  geom_line() +
+  facet_wrap(~TAXA_NAME, scales = "free_y")
+
+## i did the same thing by averaging by cruise_name, year, taxa and then year
+# and taxa and gives same result at least for line plots 
+
+euphausi2 <- euphausi_g %>%
+  group_by(cruise_name, year, taxa) %>%
+  mutate(mean_100m3 = mean(ind_100m3)) %>%
+  distinct(cruise_name, year, taxa, .keep_all = TRUE) %>%
+  ungroup()
+
+euphausi2 <- euphausi2 %>%
+  group_by(year, taxa) %>%
+  mutate(mean_100m3 = mean(mean_100m3)) %>%
+  distinct(year, taxa, .keep_all = TRUE) %>%
+  ungroup()
+
+ggplot(euphausi2, aes(x = year, y = mean_100m3, color = taxa)) + 
+  geom_line() 
+
+ggplot(euphausi2, aes(x = date1, y = mean_100m3, color = taxa)) + 
+  geom_line() +
+  facet_wrap(~TAXA_NAME, scales = "free_y")
+
+
+############################################################################## 
+## right now im looking at 12 taxa
+euph <- eu_l_mean %>%
+  filter(taxa == "euph")
+thysin <- eu_l_mean %>%
+  filter(taxa == "thysin")
+megan <- eu_l_mean %>%
+  filter(taxa == "megan")
+thysra <- eu_l_mean %>%
+  filter(taxa == "thysra")
+thyslo <- eu_l_mean %>%
+  filter(taxa == "thyslo")
+euphkr <- eu_l_mean %>%
+  filter(taxa == "euphkr")
+euphspp <- eu_l_mean %>%
+  filter(taxa == "euphspp")
+thysgr <- eu_l_mean %>%
+  filter(taxa == "thysgr")
+stylel <- eu_l_mean %>%
+  filter(taxa == "stylel")
+nemame <- eu_l_mean %>%
+  filter(taxa == "nemame")
+thysspp <- eu_l_mean %>%
+  filter(taxa == "thysspp")
+############################################################################## 
+############################################################################## 
+## i skipped a bunch of plots so can look back to the original
+#ecomon_euphaus_100m3 script 
+
+##############################################################################    
+### MEGAN
+############################################################################## 
+boxplot(megan$mean_100m3)
+
+ggplot(megan, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(megan$TAXA_NAME)
+############################################################################## 
+
+############################################################################## 
+### THYSIN
+############################################################################## 
+boxplot(thysin$mean_100m3)
+
+ggplot(thysin, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(thysin$TAXA_NAME)
+############################################################################## 
+
+############################################################################## 
+### THYSRA
+############################################################################## 
+boxplot(thysra$mean_100m3)
+
+ggplot(thysra, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(thysra$TAXA_NAME)
+############################################################################## 
+
+############################################################################## 
+### THYSLO
+############################################################################## 
+boxplot(thyslo$mean_100m3)
+
+ggplot(thyslo, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(thyslo$TAXA_NAME)
+############################################################################## 
+
+############################################################################## 
+### EUPHKR
+############################################################################## 
+boxplot(euphkr$mean_100m3)
+
+ggplot(euphkr, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(euphkr$TAXA_NAME)
+############################################################################## 
+
+
+############################################################################## 
+### EUPHSPP
+############################################################################## 
+boxplot(euphspp$mean_100m3)
+
+ggplot(euphspp, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(euphspp$TAXA_NAME)
+############################################################################## 
+
+############################################################################## 
+### THYSGR
+############################################################################## 
+boxplot(thysgr$mean_100m3)
+
+ggplot(thysgr, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(thysgr$TAXA_NAME)
+############################################################################## 
+
+############################################################################## 
+### STYLEL
+############################################################################## 
+boxplot(stylel$mean_100m3)
+
+ggplot(stylel, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(stylel$TAXA_NAME)
+############################################################################## 
+
+
+############################################################################## 
+### NEMAME
+############################################################################## 
+boxplot(nemame$mean_100m3)
+
+ggplot(nemame, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(nemame$TAXA_NAME)
+############################################################################## 
+
+
+############################################################################## 
+### THYSSPP
+############################################################################## 
+boxplot(thysspp$mean_100m3)
+
+ggplot(thysspp, aes(x = year, y = mean_100m3)) + 
+  geom_line() +
+  #facet_wrap(~season) +
+  theme_bw() + 
+  ggtitle(thysspp$TAXA_NAME)
+############################################################################## 
+
+
+##############################################################################
+################          SELECTING THE TOP TAXA      ######################## 
+############################################################################## 
+eu_taxapick <- eu_l_mean %>%
+  filter(taxa == "thysin"| taxa == "megan"| taxa == "thysra"| taxa == "thyslo" |
+           taxa == "euphkr"| taxa == "thysgr"| taxa == "stylel"| taxa == "nemame"|
+           taxa == "thysspp")
+############################################################################## 
+ggplot(eu_taxapick, aes(x = year, y = mean_100m3, color = taxa)) + 
+  geom_line() +
+  theme_bw()
+############################################################################## 
+ggplot(eu_taxapick, aes(x = year, y = mean_100m3,  fill = TAXA_NAME)) + 
+  geom_bar(stat = "identity" , position = "fill") +
+  scale_fill_manual(values = mycolors) +
+  labs(y = "Relative Abundance (%)") +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        legend.text = element_text(size = 11),
+        legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=11),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+## thy spp
+thyspp <- eu_l_mean %>%
+  filter(taxa == "thysin" | taxa == "thysra" | taxa == "thyslo" |
+           taxa == "thysgr" 
+         #| taxa == "thysspp"
+  )
+ggplot(thyspp, aes(x = year, y = mean_100m3, color = TAXA_NAME)) + 
+  geom_line() +
+  theme_bw()
+############################################################################## 
+
+
+
+
+##############################################################################
+########################        SEASONAL TRENDS      ######################## 
+############################################################################## 
+eu_sea <- eu_l %>%
+  group_by(cruise_name, season, year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(ind_100m3)) %>%
+  distinct(cruise_name, season, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+
+eu_sea_m <- eu_sea %>%
+  group_by(season, year, TAXA_NAME) %>%
+  mutate(mean_100m3 = mean(mean_100m3)) %>%
+  distinct(season, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup() 
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_sea_m %>% filter(taxa != "euph" & taxa != "euph1"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~season, scales = "free_y") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume")))+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=12), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_sea_m %>% filter(taxa != "euph" & taxa != "euph1"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_wrap(~season) +
+  labs(y = "Relative Abundance (%)")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=12), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+############################################################################## 
+ggplot(data=eu_sea_m %>% filter(taxa != "euph"),
+       aes(x=year, y=mean_100m3, fill = TAXA_NAME)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_wrap(~season) +
+  labs(y = "Relative Abundance (%)")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=12), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01,0.01)))
+############################################################################## 
+
+
+############################################################################## 
+ggplot(data=eu_sea_m %>% filter(taxa != "euph" & taxa != "euph1"),
+       aes(x=year, y=mean_100m3, color = TAXA_NAME)) +
+  geom_line(linewidth = 1.1) +
+  facet_wrap(~season, scales = "free") +
+  labs(y = expression(paste("per 100", m^{3}, "of water volume"))) +
+  scale_color_manual(values = mycolors) +
+  theme_bw() + 
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        #legend.text = element_text(size = 20, face = "bold"),
+        #legend.background = element_rect(fill = "white", color = 1),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16, 
+                                    face = "bold"),
+        axis.text.x = element_text(color = "black", 
+                                   size = 15, angle = 45, hjust = 1,
+                                   vjust = 1),
+        axis.text.y = element_text(color = "black", 
+                                   size = 14),
+        strip.text.x = element_text(size=12), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.length = unit(0.2,"cm")) 
+############################################################################## 
+
+
+
+############################################################################## 
+############################################################################## 
+#####################  -----        LOOPS       -------      ################# 
+############################################################################## 
+############################################################################## 
+Sp <- unique(eu_sea_m$TAXA_NAME) #create list of species to loop over
+
+TAXA_Dens <- list()
+
+
+for(Sp_ in Sp) {
+  TAXA_Dens[[Sp_]] = ggplot(eu_sea_m %>% filter(TAXA_NAME == Sp_), 
+                            aes(x=year, y=mean_100m3)) +
+    geom_bar(stat = "identity") + 
+    facet_wrap(~season) +
+    labs(y = expression(paste("per 100", m^{3}, "of water volume"))) +
+    theme_bw() + 
+    theme(
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 16, 
+                                      face = "bold"),
+          axis.text.x = element_text(color = "black", 
+                                     size = 15, angle = 45, hjust = 1,
+                                     vjust = 1),
+          axis.text.y = element_text(color = "black", 
+                                     size = 14),
+          strip.text.x = element_text(size=12), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.ticks.length = unit(0.2,"cm")) +
+    scale_y_continuous(expand = expansion(mult = c(0,0.01))) + 
+    ggtitle(paste0(Sp_))
+  print(TAXA_Dens[[Sp_]])
+  ggsave(TAXA_Dens[[Sp_]], file=paste0("Dens_hist_", Sp_, ".png"))
+}
+
+############################################################################## 
+
+for(Sp_ in Sp) {
+  TAXA_Dens[[Sp_]] = ggplot(eu_sea_m %>% filter(TAXA_NAME == Sp_), 
+                            aes(x=year, y=mean_100m3)) +
+    geom_line() + 
+    facet_wrap(~season) +
+    labs(y = expression(paste("per 100", m^{3}, "of water volume"))) +
+    theme_bw() + 
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 16, 
+                                  face = "bold"),
+      axis.text.x = element_text(color = "black", 
+                                 size = 15, angle = 45, hjust = 1,
+                                 vjust = 1),
+      axis.text.y = element_text(color = "black", 
+                                 size = 14),
+      strip.text.x = element_text(size=12), 
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.ticks.length = unit(0.2,"cm")) + 
+    ggtitle(paste0(Sp_))
+  print(TAXA_Dens[[Sp_]])
+  ggsave(TAXA_Dens[[Sp_]], file=paste0("SNE_Season_Line_", Sp_, ".png"))
+}
+
+############################################################################## 
+# same as previous but free y 
+for(Sp_ in Sp) {
+  TAXA_Dens[[Sp_]] = ggplot(eu_sea_m %>% filter(TAXA_NAME == Sp_), 
+                            aes(x=year, y=mean_100m3)) +
+    geom_line() + 
+    facet_wrap(~season, scales = "free_y") +
+    labs(y = expression(paste("per 100", m^{3}, "of water volume"))) +
+    theme_bw() + 
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 16, 
+                                  face = "bold"),
+      axis.text.x = element_text(color = "black", 
+                                 size = 15, angle = 45, hjust = 1,
+                                 vjust = 1),
+      axis.text.y = element_text(color = "black", 
+                                 size = 14),
+      strip.text.x = element_text(size=12), 
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.ticks.length = unit(0.2,"cm")) + 
+    ggtitle(paste0(Sp_))
+  print(TAXA_Dens[[Sp_]])
+  ggsave(TAXA_Dens[[Sp_]], file=paste0("SNE_Season_Line_", Sp_, "FREE_Y.png"))
+}
+
+
+## need to go back to other script to check rest
+## line 894 

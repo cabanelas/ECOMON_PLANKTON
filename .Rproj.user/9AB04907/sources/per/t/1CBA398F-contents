@@ -1,0 +1,267 @@
+########################################################################
+########################################################################
+########################################################################
+###########   ---  Abundance Anomalies    ---   ########################
+########################################################################
+########################################################################
+###########   ---   SEASONAL ANOMALIES    ---   ########################
+########################################################################
+# Yi = log10(ind/10m2 + 1)
+# Yi = (Yi - mean(Yc))/sd(Yc)
+# Yc,reg = cruise mean Yi,region
+# Yc cruise mean of Yi within region 
+# Y anom = (Yc - mean(Yc,yr)) / (SD)Yc
+
+# euph_10m2 is the sum of taxa codes 2000-2099 and euph1_10m2 is just 
+# unidentified euphausicea (just taxa code 2000) -Harvey 
+
+## Packages
+library(tidyverse)
+
+## Data 
+zp <- read.csv("output/EcoMon_SubEUPHAU_AllRegions_m2_long.csv")
+# this csv was created in m2_euphausiid_subset_csv_06JUL script
+
+# format date
+zp$Date <- as.Date(zp$date, format = "%d-%b-%y")
+
+# add season - following season grouping that State of Ecosys/NOAA uses
+# different from my original df by a month or so
+# (i think i orgininally had winter start in Dec)
+zp <- zp %>%
+  mutate(season = case_when(between(monthNum, 1, 3) ~ "winter",
+                            between(monthNum, 4, 6) ~ "spring",
+                            between(monthNum, 7, 9) ~ "summer",
+                            between(monthNum, 10,12) ~ "fall"))
+
+#############################################################
+#############################################################
+##################            SNE             ###############
+#############################################################
+# Select Southern New England Region 
+SNE <- zp %>% filter(Region == "SNE")
+
+# check
+SNE %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = ind_10m2)) +
+  geom_point()
+#############################################################
+
+# 1) add 1 and take log
+SNE$Yi <- log10(SNE$ind_10m2+1)
+#SNE$ind_plus1 <- SNE$ind_10m2+1
+
+# check
+SNE %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = Yi)) +
+  geom_point()
+#############################################################
+
+# Yc cruise mean of Yi within region by season
+# 2) take mean by cruise for each taxa within SNE
+SNE1 <- SNE %>%
+  group_by(cruise_name, season, year, taxa) %>%
+  mutate(Yc = mean(Yi)) %>% 
+  distinct(cruise_name, season, year, taxa, .keep_all = T)
+
+# check
+SNE1 %>% filter(taxa == "megan" & season == "summer") %>%
+  ggplot(aes(x = Date, y = Yc)) +
+  geom_point()
+#############################################################
+
+# 3) calculate mean and SD of Yc by year
+SNE2 <- SNE1 %>%
+  group_by(season, year, taxa) %>%
+  mutate(YcAV_yr = mean(Yc), 
+         YcSD_yr = sd(Yc)) 
+
+# check
+SNE2 %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = YcAV_yr)) +
+  geom_point()
+SNE2 %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = YcSD_yr)) +
+  geom_point()
+#############################################################
+
+# 4) calculate anomalies
+SNE2 <- SNE2 %>%
+  #group_by(year, taxa) %>% doesnt make a difference
+  mutate(Anomaly_yr = (Yc - YcAV_yr)/(YcSD_yr)) 
+
+# check
+SNE2 %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = Anomaly_yr)) +
+  geom_point()
+
+# any NAs?
+SNE2 %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = Anomaly_yr)) +
+  geom_point() +
+  geom_line()
+#yes
+########################################################################
+# options for dealing with the NAs
+# leave empty ... prolly not
+
+# OPTION 1: add a small constant
+# tried it, basically ended up being like replacing NAs with 0s
+
+# OPTION 2 : interpolation
+# linear for now, but other options avail such as spline... with this package
+# https://www.rdocumentation.org/packages/imputeTS/versions/3.3/topics/na_interpolation
+library("imputeTS")
+SNE2a <- SNE2
+SNE2a$Anomaly_yr <- na_interpolation(SNE2a$Anomaly_yr)
+
+SNE2a %>% filter(taxa == "megan") %>%
+  ggplot(aes(x = Date, y = Anomaly_yr)) +
+  geom_point()
+
+SNE2a <- SNE2a %>%
+  mutate(col = factor(ifelse(Anomaly_yr > 0, 2, 1)))
+
+# OPTION 3 : build linear model using data and then use that to replace NAs
+# build linear model based on existing data (model ignores rows with NAs)
+
+# OPTION 4: https://github.com/NOAA-EDAB/tech-doc/blob/master/R/stored_scripts/zooplankton_analysis.R
+# OPTION 5: detrending - but i think that removes long term trend and keeps short/seasonal
+###############################################################################
+
+###############################################################################
+######     ---          Winter              ---    ############################
+###############################################################################
+###############################################################################
+###############################################################################
+######     ---   Meganyctiphanes norvegica  ---    ############################
+###############################################################################
+###############################################################################
+meg <- SNE2a %>% 
+  filter(taxa == "megan" & season == "winter")
+
+meganAnom <- ggplot(data = meg, aes(x = Date, y = Anomaly_yr)) +
+  geom_line() +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica - winter") +
+  geom_hline(yintercept = 0)
+
+ggplot(data = meg, aes(x = as.factor(year), y = Anomaly_yr, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE)
+
+########################################################################
+meg_a <- aggregate(Anomaly_yr ~ month + year, data=meg, FUN= function (x) c(mean=mean(x)))
+
+meg_a <- meg_a %>%
+  mutate(col = factor(ifelse(Anomaly_yr > 0, 2, 1)))
+
+ggplot(data = meg_a, aes(x = as.factor(year), y = Anomaly_yr, fill =col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = position_dodge2(width = 0.9, preserve = "single"),
+           show.legend=FALSE) +
+  labs(y='year') +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 8)) +
+  theme(axis.text.x = element_text(angle = 90))
+
+################################################################
+################################################################
+################################################################
+#####      -----         CLIMATIC INDEXES         ------   #####
+################################################################
+#####      -----           AMO            --------        ######
+## Data
+amo <- read.csv("raw/amo_month_NCAR_filtered.csv") #from amo script
+amo <- amo %>% filter(yr >= 1977 & yr <= 2020)
+
+amo$Date <- zoo::as.yearmon(paste(amo$yr, amo$month), "%Y %b")
+amo$Date <- format(amo$Date, '%Y-%m-%01')
+amo$Date <- as.Date(amo$Date, '%Y-%m-%d')
+#############################################################
+hist(amo$amo) #looks good; also checked for heteroscedasticity 
+qqnorm(amo$amo)
+qqline(amo$amo)
+
+amo$monthNum <- match(amo$month, month.abb)
+
+amo <- amo %>%
+  mutate(season = case_when(between(monthNum, 1, 3) ~ "winter",
+                            between(monthNum, 4, 6) ~ "spring",
+                            between(monthNum, 7, 9) ~ "summer",
+                            between(monthNum, 10,12) ~ "fall"))
+
+amo <- amo %>%
+  mutate(col = factor(ifelse(amo > 0, 2, 1)))
+
+amow <- amo %>% 
+  filter(season == "winter")
+
+amoAnom <- ggplot(data = amow, aes(x = Date, y = amo)) +
+  geom_line() +
+  geom_point() +
+  theme_classic() +
+  geom_hline(yintercept = 0)
+###############################################################################
+
+amoMeg <- ggplot() +
+  geom_line(data = amow, aes(x = Date, y = amo), color = "red",
+            linewidth = 1.2) +
+  geom_line(data = meg, aes(x = Date, y = Anomaly_yr),
+            linewidth = 0.8) +
+  geom_point(data = amow, aes(x = Date, y = amo), color = "red") +
+  geom_point(data = meg, aes(x = Date, y = Anomaly_yr)) +
+  theme_classic() +
+  geom_hline(yintercept = 0)
+
+library(cowplot)
+
+plot1 <- plot_grid(meganAnom, amoAnom, amoMeg, nrow=3)
+#ggsave("MeganSNEamo1.png", plot1, width = 10, height = 10, dpi = 300)
+###############################################################################
+
+##without interpolating abundance data
+mega <- SNE2 %>% 
+  filter(taxa == "megan" & season == "winter")
+
+meganAnom1 <- ggplot(data = mega, aes(x = Date, y = Anomaly_yr)) +
+  geom_line() +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica - winter") +
+  geom_hline(yintercept = 0)
+
+plot_grid(meganAnom1, amoAnom, amoMeg, nrow=3)
+
+## or replacing NAs with 0 
+megaNA <- SNE2 %>% 
+  filter(taxa == "megan" & season == "winter")
+megaNA$Anomaly_yr[is.na(megaNA$Anomaly_yr)] <- 0
+
+meganAnom2 <- ggplot(data = megaNA, aes(x = Date, y = Anomaly_yr)) +
+  geom_line() +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica - winter") +
+  geom_hline(yintercept = 0)
+
+plot_grid(meganAnom2, amoAnom, amoMeg, nrow=3)
+
+###############################################################################
+######     ---          summer              ---    ############################
+###############################################################################
+
+
+
+
+
+
+
+
+
+
+ggplot(data = amow, aes(x = Date, y = amo, color = col, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE)

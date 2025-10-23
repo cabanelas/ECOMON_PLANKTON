@@ -1,0 +1,26 @@
+{
+    "id": "188A44DF",
+    "path": "~/MITWHOI/1. RESEARCH/NES-LTER/01_20230531_ECOMON_Data/ECOMON_PLANKTON/seasonal_anomalies.R",
+    "project_path": "seasonal_anomalies.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1761162330039.0,
+    "source_on_save": false,
+    "relative_order": 5,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "104,13",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1691952112,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1691952112,
+    "read_only": false,
+    "read_only_alternatives": []
+}

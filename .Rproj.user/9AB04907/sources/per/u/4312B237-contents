@@ -1,0 +1,103 @@
+
+example <- meg[, c(2, 15:19,35)]
+example <- example[sample(nrow(example), 25), ]
+# format date
+example$date <- as.Date(example$date, format = "%d-%b-%y")
+
+example <- example %>%
+  mutate(col = factor(ifelse(Anomaly_yr > 0, 2, 1)))
+
+ggplot(data = example,
+       mapping = aes(x = date, y = Anomaly_yr, 
+                     fill = col, 
+                     color = col
+                     )) + 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE) 
+# position
+
+ggplot(data = example, aes(x = date, y = Anomaly_yr, fill = col, color = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE) +
+  #scale_x_date(date_labels = "%d - %b", date_breaks = "1 day",
+  #             expand = c(0,0))
+  scale_x_date(date_labels = "%Y - %b", 
+               date_breaks = "1 month")
+
+
+ 
+library(scales)
+ggplot(data = example, aes(x = date, y = Anomaly_yr, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE) +
+  #scale_x_date(date_labels = "%d - %b", date_breaks = "1 day",
+  #             expand = c(0,0))
+  scale_x_date(labels = date_format("%y"), breaks = date_breaks("year"))
+
+ggplot(data = example, aes(x = date, y = Anomaly_yr, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE) +
+  #scale_x_date(date_labels = "%d - %b", date_breaks = "1 day",
+  #             expand = c(0,0))
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b %Y")
+
+
+
+
+
+example$YearMonth <- as.Date(paste(example$year, example$monthNum, "1", sep = "-"))
+example$YearMonth <- as.Date(paste0(format(example$YearMonth, "%Y-%m"), "-01"))
+example$YearMonth_Label <- format(example$YearMonth, "%Y %b")
+# Create the order of the months
+month_order <- c("Jan", "Feb", "Mar")
+example$YearMonth_Label <- factor(example$YearMonth_Label, levels = unique(example$YearMonth_Label, "%Y %b"))
+
+ggplot(data = example, aes(x = YearMonth_Label, y = Anomaly_yr, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 8)) +
+  theme(axis.text.x = element_text(angle = 90))
+
+#meg$Year3 <- factor(meg$YearMonth_Label)
+example$Date3 <- zoo::as.yearmon(paste(example$year, example$month), "%Y %b")
+example$Date3 <- format(example$Date3, '%Y-%m-%01')
+example$Date3 <- as.Date(example$Date3, '%Y-%m-%d')
+
+ggplot(data = example, aes(x = Date3, y = Anomaly_yr, fill = col, color = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "identity",
+           show.legend=FALSE) 
+
+
+
+ggplot(data = example, aes(x = as.factor(year), y = Anomaly_yr, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           show.legend=FALSE)
+
+a <- aggregate(Anomaly_yr ~ month + year, data=example, FUN= function (x) c(mean=mean(x)))
+
+a <- a %>%
+  mutate(col = factor(ifelse(Anomaly_yr > 0, 2, 1)))
+
+ggplot(data = a, aes(x = as.factor(year), y = Anomaly_yr, fill =col)) + #need to add fill argument due to pixel issue 
+  geom_bar(stat = "identity", 
+           position = position_dodge2(width = 0.9, preserve = "single"),
+           show.legend=FALSE) +
+  labs(y='year') +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 8)) +
+  theme(axis.text.x = element_text(angle = 90))
+
+
+
+
+
+
+
+ggplot(data = example, aes(x = as.factor(year), y = Anomaly_yr, fill = col)) + #need to add fill argument due to pixel issue 
+  geom_point()

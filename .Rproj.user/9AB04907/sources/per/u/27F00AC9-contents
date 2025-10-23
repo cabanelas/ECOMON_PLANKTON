@@ -1,0 +1,80 @@
+
+meg_SNE_cru <- zp_av_cru %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+a <- ggplot(meg_SNE_cru, aes(x = Date, y = mean_log)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+meg_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+b <- ggplot(meg_SNE_reg, aes(x = Date, y = mean_log)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+meg_SNE_month <- zp_av_month %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+c <- ggplot(meg_SNE_month, aes(x = Date, y = momean_log)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+meg_SNE_month_yr <- zp_av_month_yr %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+d <- ggplot(meg_SNE_month_yr, aes(x = Date, y = mean_logov)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+library(cowplot)
+plot_grid(a,b,c,d)
+
+meg_SNE_alast <- zp_alast %>%
+  filter(taxa == "megan" & Region == "SNE")
+ggplot(meg_SNE_alast, aes(x = Date, y = mean_logov)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+#
+#### plot anomalies
+meg_anomon <- zp_anoma1 %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+aa <- ggplot(meg_anomon, aes(x = Date, y = anomaly)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica \nMonthly Anomalies")
+
+meg_anoyr <- yrly %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+aa1 <- ggplot(meg_anoyr, aes(x = Date, y = anomalyyr)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica \nYearly Anomalies")
+
+
+plot_grid(aa, aa1, nrow=2)
+
+ggplot(meg_anoyr, aes(x = Date, y = anomalyyr)) +
+  geom_bar(stat = "identity") +
+  theme_classic() + 
+  geom_hline(yintercept = 0) +
+  ggtitle("SNE - Meganyctiphanes norvegica \nYearly Anomalies")
+
+
+
+######

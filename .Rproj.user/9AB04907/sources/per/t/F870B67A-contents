@@ -1,0 +1,538 @@
+#############################################################
+#############################################################
+#############################################################
+###########   ----      MEGAN    -------   ##################
+#############################################################
+#############################################################
+
+## Packages
+library(tidyverse)
+
+## Data 
+zp <- read.csv("output/EcoMon_SubEUPHAU_AllRegions_m2_long.csv")
+# this csv was created in m2_euphausiid_subset_csv_06JUL script
+
+zp$Date <- as.Date(zp$date, format = "%d-%b-%y")
+#############################################################
+# 1) add 1 and take log
+zp$abuLog <- log10(zp$ind_10m2+1)
+
+#################################################################
+###################################################################
+#######################################################################
+# take mean log by cruise+region+species
+zp1 <- zp %>% ###################### ??????????
+  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(meanabuLog = mean(abuLog)) %>%
+  distinct(cruise_name, Region, TAXA_NAME, .keep_all = TRUE)
+
+
+
+# calculate mean and sd for anomalies - monthly time series
+zp1monthaa <- zp %>% ###################### ??????????
+  group_by(month, Region, TAXA_NAME) %>%
+  mutate(meanLOGa = mean(abuLog),
+         sdLog = sd(abuLog))
+
+zp1month <- zp1monthaa %>% ###################### ??????????
+  group_by(month, year, Region, TAXA_NAME) %>%
+  mutate(meanabuLog = mean(abuLog)) %>%
+  distinct(month, year, Region, TAXA_NAME, .keep_all = TRUE)
+
+zp1month1 <- zp1month %>% ###################monthly anomaly 
+  #group_by(Region, TAXA_NAME) %>%
+  mutate(anomaly = (meanabuLog-meanLOGa)/sdLog) 
+
+meg <- zp1month1 %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+ggplot(meg, aes(x = Date, y = anomaly)) +
+  geom_line(linewidth = 0.6) + 
+  #geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+meg90 <- meg %>%
+  filter(year > 1990) 
+
+ggplot(meg90, aes(x = Date, y = anomaly)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+
+yrly <- zp1month1 %>%
+  group_by(Region, year, TAXA_NAME) %>%
+  mutate(anomalyyr = mean(anomaly)) %>%
+  distinct(Region, year, TAXA_NAME, .keep_all = TRUE)
+
+meg <- yrly %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+ggplot(meg, aes(x = Date, y = anomalyyr)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+zp <- zp %>% ###################### ??????????
+  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(meanabuLogcr = mean(abuLog))
+
+# 2) anomalies
+#need mean log abun of whole time series by taxa by region
+zp1 <- zp %>%
+  group_by(Region, TAXA_NAME) %>%
+  mutate(meanLog = mean(abuLog),
+         sdLog = sd(abuLog))
+
+zp1 <- zp1 %>%
+  group_by(Region, TAXA_NAME) %>%
+  mutate(anomaly = (abuLog-meanLog)/sdLog)
+
+zp1a <- zp1 %>% ###################this seems better - have not transfer
+  group_by(Region, TAXA_NAME) %>%
+  mutate(anomaly2 = (meanabuLogcr-meanLog)/sdLog) %>%
+  distinct(cruise_name, Region, TAXA_NAME, .keep_all = TRUE)
+
+zp1$anomaly[is.na(zp1$anomaly)] <- 0
+
+zp1 <- zp1 %>%
+  mutate(anomBoun = case_when(anomaly >= 1 ~ 1,
+                              anomaly <= -1 ~ -1,
+                              TRUE ~ anomaly))
+
+
+zp1a <- zp1 %>%
+  distinct(Region, TAXA_NAME, .keep_all = TRUE)
+######
+##############################
+#zp1 <- zp1 %>% NOPE
+  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(anomaly2 = (abuLog-meanLog)/sdLog)
+
+
+##############################
+# by taxa by region by cruise, is it diff? 
+zp2 <- zp %>%
+  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(meanLog = mean(abuLog),
+         sdLog = sd(abuLog))
+
+zp2 <- zp2 %>%
+  #  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(anomaly3 = (abuLog-meanLog)/sdLog)
+
+zp2$anomaly3[is.na(zp2$anomaly3)] <- 0
+
+zp2a <- zp2 %>%
+  distinct(cruise_name, Region, TAXA_NAME, .keep_all = TRUE)
+####################
+####################
+zp3 <- zp %>%
+  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(meanLog = mean(abuLog),
+         sdLog = sd(abuLog)) %>%
+  distinct(cruise_name, Region, TAXA_NAME, .keep_all = TRUE)
+zp3 <- zp3 %>%
+  #  group_by(cruise_name, Region, TAXA_NAME) %>%
+  mutate(anomaly3 = (abuLog-meanLog)/sdLog)
+zp3$anomaly3[is.na(zp3$anomaly3)] <- 0
+####################
+####################
+
+# 3) take means - to plot just log abundance 
+
+## first take mean by cruise + region 
+zp_av_cru <- zp %>%
+  group_by(cruise_name, Region, year, TAXA_NAME) %>%
+  mutate(mean_log10m2 = mean(abuLog)) %>%
+  distinct(cruise_name, Region, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup()
+
+### average region + yr
+zp_av_reg <- zp_av_cru %>%
+  group_by(Region, year, TAXA_NAME) %>%
+  mutate(mean_log10m2 = mean(mean_log10m2)) %>%
+  distinct(Region, year, TAXA_NAME, .keep_all = TRUE) %>%
+  ungroup()
+
+### TO TRY LATER - including "type" in mean cals
+#av3 <- zp1_long_name %>%
+#  group_by(cruise_name, Region, type, year, TAXA_NAME) %>%
+#  mutate(mean_10m2 = mean(ind_10m2)) %>%
+#  distinct(cruise_name, Region, type, year, TAXA_NAME, .keep_all = TRUE) %>%
+#  ungroup()
+
+#############################################################
+#############################################################
+#############################################################
+######     ---        Abundance anomalies    ---     ########
+#############################################################
+#############################################################
+#############################################################
+
+#############################################################
+#############################################################
+##################            SNE             ###############
+#############################################################
+#############################################################
+#############################################################
+
+
+#############################################################
+######     ---   Meganyctiphanes norvegica  ---    ##########
+#############################################################
+meg_SNE <- zp_av_cru %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+
+ggplot(meg_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+
+
+meg_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+
+ggplot(meg_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+ggplot(meg_SNE_reg, aes(x = Date, y = anomaly3)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+meg_SNE2 <- zp1 %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+ggplot(meg_SNE2, aes(x = Date, y = anomaly)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+meg_SNE2a <- zp1a %>%
+  filter(taxa == "megan" & Region == "SNE")
+
+ggplot(meg_SNE2a, aes(x = Date, y = anomaly)) +
+  geom_line(linewidth = 0.6) + 
+  #geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Meganyctiphanes norvegica")
+
+
+#############################################################
+######     ----    	Euphausia  krohnii   ----      ##########
+#############################################################
+kro_SNE <- zp_av_cru %>%
+  filter(taxa == "euphkr" & Region == "SNE")
+
+
+ggplot(kro_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausia krohnii")
+
+kro_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "euphkr" & Region == "SNE")
+
+
+ggplot(kro_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausia krohnii")
+
+ggplot(kro_SNE_reg, aes(x = Date, y = anomaly)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausia krohnii")
+#############################################################
+######     -----   Thysanoessa gregaria   -----    ##########
+#############################################################
+greg_SNE <- zp_av_cru %>%
+  filter(taxa == "thysgr" & Region == "SNE")
+
+
+ggplot(greg_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa gregaria")
+
+greg_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "thysgr" & Region == "SNE")
+
+
+ggplot(greg_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa gregaria")
+
+
+#############################################################
+######    ----   Thysanoessa longicaudata   ----    #########
+#############################################################
+thyslo_SNE <- zp_av_cru %>%
+  filter(taxa == "thyslo" & Region == "SNE")
+
+ggplot(thyslo_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa longicaudata")
+
+thyslo_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "thyslo" & Region == "SNE")
+
+ggplot(thyslo_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa longicaudata")
+
+
+#############################################################
+######    ----    Nematoscelis megalops    ----     #########
+#############################################################
+nemame_SNE <- zp_av_cru %>%
+  filter(taxa == "nemame" & Region == "SNE")
+
+ggplot(nemame_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Nematoscelis megalops")
+
+nemame_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "nemame" & Region == "SNE")
+
+ggplot(nemame_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Nematoscelis megalops")
+
+
+
+#############################################################
+######    -----    Thysanoessa raschii    -----     #########
+#############################################################
+thysra_SNE <- zp_av_cru %>%
+  filter(taxa == "thysra" & Region == "SNE")
+
+ggplot(thysra_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa raschii")
+
+thysra_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "thysra" & Region == "SNE")
+
+ggplot(thysra_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa raschii")
+
+
+#############################################################
+######     ----     Thysanoessa inermis    ----    ##########
+#############################################################
+thysin_SNE <- zp_av_cru %>%
+  filter(taxa == "thysin" & Region == "SNE")
+
+ggplot(thysin_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa inermis")
+
+thysin_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "thysin" & Region == "SNE")
+
+ggplot(thysin_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa inermis")
+
+
+#############################################################
+#######     -----     Thysanoessa spp.    -----    ##########
+#############################################################
+thysspp_SNE <- zp_av_cru %>%
+  filter(taxa == "thysspp" & Region == "SNE")
+
+ggplot(thysspp_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa spp.")
+
+thysspp_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "thysspp" & Region == "SNE")
+
+ggplot(thysspp_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Thysanoessa spp.")
+
+
+#############################################################
+#######      -----     Euphausia spp.    -----     ##########
+#############################################################
+euphspp_SNE <- zp_av_cru %>%
+  filter(taxa == "euphspp" & Region == "SNE")
+
+ggplot(euphspp_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausia spp.")
+
+euphspp_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "euphspp" & Region == "SNE")
+
+ggplot(euphspp_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausia spp.")
+
+
+#############################################################
+#######     -----     Stylocheiron spp.    -----   ##########
+#############################################################
+stylspp_SNE <- zp_av_cru %>%
+  filter(taxa == "stylspp" & Region == "SNE")
+
+ggplot(stylspp_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Stylocheiron spp.")
+
+stylspp_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "stylspp" & Region == "SNE")
+
+ggplot(stylspp_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Stylocheiron spp.")
+
+
+
+#############################################################
+#######      -----      Euphausiacea      -----    ##########
+#############################################################
+euph_SNE <- zp_av_cru %>%
+  filter(taxa == "euph" & Region == "SNE")
+
+ggplot(euph_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausiacea")
+
+euph_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "euph" & Region == "SNE")
+
+ggplot(euph_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausiacea")
+
+
+#############################################################
+#######      -----     Euphausiacea1      -----    ##########
+#############################################################
+euph1_SNE <- zp_av_cru %>%
+  filter(taxa == "euph1" & Region == "SNE")
+
+ggplot(euph1_SNE, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausiacea1")
+
+euph1_SNE_reg <- zp_av_reg %>%
+  filter(taxa == "euph1" & Region == "SNE")
+
+ggplot(euph1_SNE_reg, aes(x = Date, y = mean_log10m2)) +
+  geom_line(linewidth = 0.6) + 
+  geom_point(size = 1.2) +
+  theme_classic() + 
+  ggtitle("SNE - Euphausiacea1")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### OVERLAY WITH CLIMATIC INDEXES
+## Data
+amo <- read.csv("raw/amo_month_NCAR_filtered.csv") #from amo script
+amo <- amo %>% filter(yr >= 1977 & yr <= 2020)
+
+zp_av_reg1 <- zp_av_reg %>% filter(year <= 2020)
+#nao <- 
+
+## 1) merge df
+zp_av_reg #2196 -> 2148
+#amo 615 -> 531 -> 528
+#megan sne 282
+
+megSNE2 <- meg_SNE[, c(1,2,21,23,24,26)] #av by crui
+
+
+## group by season line plots 
+
+> cruisess <- zp %>%
+  +     group_by(cruise_name) %>%
+  +     mutate(unique_types = n_distinct(type))
+> View(cruisess)
+> cruises <- zp %>%
+  +     group_by(cruise_name, Region) %>%
+  +     mutate(unique_types = n_distinct(type))
+> View(cruises)

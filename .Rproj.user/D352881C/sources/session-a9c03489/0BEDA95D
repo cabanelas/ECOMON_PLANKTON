@@ -1,0 +1,26 @@
+{
+    "id": "0BEDA95D",
+    "path": "~/MITWHOI/1. RESEARCH/NES-LTER/01_20230531_ECOMON_Data/ECOMON_PLANKTON/02_ecomon_tidy_subsets.R",
+    "project_path": "02_ecomon_tidy_subsets.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1761088998077.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "130,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1761093125,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1761093125577,
+    "read_only": false,
+    "read_only_alternatives": []
+}
